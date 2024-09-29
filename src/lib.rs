@@ -28,21 +28,21 @@
 //! let mut length = 0;
 //!
 //! let stats = memory_measured(GLOBAL, || {
-//!   let v = vec![1, 2, 3, 4, 5];
+//!   let s = "whoa".to_owned().replace("whoa", "wow").to_owned();
 //!
-//!   length = v.len();
+//!   length = s.len();
 //! });
 //!
-//! assert_eq!(length, 5);
+//! assert_eq!(length, 3);
 //!
 //! assert_eq!(
 //!   stats,
 //!   Stats {
-//!    allocations: 1,
-//!    deallocations: 1,
+//!    allocations: 3,
+//!    deallocations: 3,
 //!    reallocations: 0,
-//!    bytes_allocated: 20,
-//!    bytes_deallocated: 20,
+//!    bytes_allocated: 15,
+//!    bytes_deallocated: 15,
 //!    bytes_reallocated: 0
 //!  }
 //! );
@@ -90,21 +90,21 @@ mod tests {
         let mut length = 0;
 
         let stats = memory_measured(GLOBAL, || {
-            let v = vec![1, 2, 3, 4, 5];
+            let s = "whoa".to_owned().replace("whoa", "wow").to_owned();
 
-            length = v.len();
+            length = s.len();
         });
 
-        assert_eq!(length, 5);
+        assert_eq!(length, 3);
 
         assert_eq!(
             stats,
             Stats {
-                allocations: 1,
-                deallocations: 1,
+                allocations: 3,
+                deallocations: 3,
                 reallocations: 0,
-                bytes_allocated: 20,
-                bytes_deallocated: 20,
+                bytes_allocated: 15,
+                bytes_deallocated: 15,
                 bytes_reallocated: 0
             }
         );
