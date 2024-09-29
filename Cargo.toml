@@ -3,7 +3,7 @@ name = "stats_alloc_helper"
 version = "0.1.0"
 edition = "2021"
 authors = ["Ivan Babrou <github@ivan.computer>"]
-license = "BSD"
+license = "BSD-3-Clause"
 description = "A test helper to measure memory allocations"
 keywords = ["alloc", "stats_alloc", "benchmark"]
 
