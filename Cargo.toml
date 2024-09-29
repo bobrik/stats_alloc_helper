@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Ivan Babrou <github@ivan.computer>"]
 license = "BSD"
+description = "A test helper to measure memory allocations"
 keywords = ["alloc", "stats_alloc", "benchmark"]
 
 [dependencies]
