@@ -1,6 +1,6 @@
 [package]
 name = "stats_alloc_helper"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Ivan Babrou <github@ivan.computer>"]
 license = "BSD-3-Clause"
@@ -9,4 +9,9 @@ keywords = ["alloc", "stats_alloc", "benchmark"]
 
 [dependencies]
 stats_alloc = { version = "0.1" }
+tokio = { version = "1", features = ["rt", "macros"], optional = true }
 libc = { version = "0.2" }
+
+[features]
+default = []
+async_tokio = ["tokio"]

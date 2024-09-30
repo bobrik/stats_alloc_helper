@@ -51,6 +51,33 @@
 //! );
 //! ```
 //!
+//! Async futures are supported with `async_tokio` feature enabled:
+//!
+//! ```ignore
+//! #[tokio::test]
+//! async fn test_tokio() {
+//!     let stats = memory_measured_future(&GLOBAL, async {
+//!         let _ = vec![1, 2, 3, 4];
+//!     })
+//!     .await;
+//!
+//!     assert_eq!(
+//!         stats,
+//!         Stats {
+//!             allocations: 1,
+//!             deallocations: 1,
+//!             reallocations: 0,
+//!             bytes_allocated: 16,
+//!             bytes_deallocated: 16,
+//!             bytes_reallocated: 0
+//!         }
+//!     );
+//! }
+//! ```
+//!
+//! This is achieved by creating a separate single threaded runtime
+//! on a separate thread and driving the future to completion on it.
+//!
 //! See crate's tests for more examples.
 
 use std::{
@@ -60,7 +87,13 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "async_tokio")]
+use std::future::Future;
+
 use stats_alloc::{Stats, StatsAlloc};
+
+#[cfg(feature = "async_tokio")]
+use tokio::{runtime, task::spawn_blocking};
 
 const STATE_UNLOCKED: usize = 0;
 const STATE_IN_USE: usize = 1;
@@ -225,6 +258,38 @@ where
     after - before
 }
 
+/// Measure memory and return [Stats] object for the runtime of the passed future.
+#[cfg(feature = "async_tokio")]
+pub async fn memory_measured_future<A, F>(alloc: &'static LockedAllocator<A>, f: F) -> Stats
+where
+    A: GlobalAlloc + Send + Sync,
+    F: Future<Output = ()> + Send + 'static,
+{
+    // Tokio runtime cannot be created from a thread that is a part of a runtime already.
+    spawn_blocking(|| {
+        let runtime = runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        runtime.block_on(async {
+            alloc.lock();
+
+            let before = alloc.stats();
+
+            f.await;
+
+            let after = alloc.stats();
+
+            alloc.unlock();
+
+            after - before
+        })
+    })
+    .await
+    .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -327,6 +392,27 @@ mod tests {
                 reallocations: 0,
                 bytes_allocated: 15,
                 bytes_deallocated: 15,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "async_tokio")]
+    async fn test_tokio() {
+        let stats = memory_measured_future(&GLOBAL, async {
+            let _ = vec![1, 2, 3, 4];
+        })
+        .await;
+
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 1,
+                deallocations: 1,
+                reallocations: 0,
+                bytes_allocated: 16,
+                bytes_deallocated: 16,
                 bytes_reallocated: 0
             }
         );

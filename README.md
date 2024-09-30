@@ -44,4 +44,31 @@ assert_eq!(
 );
 ```
 
+Async futures are supported with `async_tokio` feature enabled:
+
+```rust
+#[tokio::test]
+async fn test_tokio() {
+    let stats = memory_measured_future(&GLOBAL, async {
+        let _ = vec![1, 2, 3, 4];
+    })
+    .await;
+
+    assert_eq!(
+        stats,
+        Stats {
+            allocations: 1,
+            deallocations: 1,
+            reallocations: 0,
+            bytes_allocated: 16,
+            bytes_deallocated: 16,
+            bytes_reallocated: 0
+        }
+    );
+}
+```
+
+This is achieved by creating a separate single threaded runtime
+on a separate thread and driving the future to completion on it.
+
 See crate's tests for more examples.
