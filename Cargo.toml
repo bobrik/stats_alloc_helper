@@ -1,6 +1,6 @@
 [package]
 name = "stats_alloc_helper"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Ivan Babrou <github@ivan.computer>"]
 license = "BSD-3-Clause"
@@ -9,3 +9,4 @@ keywords = ["alloc", "stats_alloc", "benchmark"]
 
 [dependencies]
 stats_alloc = { version = "0.1" }
+libc = { version = "0.2" }
