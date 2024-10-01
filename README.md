@@ -7,20 +7,19 @@ A crate that provides a helper to measure memory allocations in tests.
 To allow measuring allocations, you must use the provided `LockedAllocator`,
 because otherwise tests running in other thread could mess up the numbers.
 
-Typically this means having the following at the top of section:
+Typically this means a setup similar to the following in tests:
+
 
 ```rust
 use std::alloc::System;
-use stats_alloc::{StatsAlloc};
-use stats_alloc_helper::LockedAllocator;
+use stats_alloc::{StatsAlloc, Stats};
+use stats_alloc_helper::{LockedAllocator, memory_measured};
 
 #[global_allocator]
 static GLOBAL: LockedAllocator<System> = LockedAllocator::new(StatsAlloc::system());
-```
 
-For the tests themselves `memory_measured` is provided:
+// In the actual tests:
 
-```rust
 let mut length = 0;
 
 let stats = memory_measured(&GLOBAL, || {
@@ -46,7 +45,7 @@ assert_eq!(
 
 Async futures are supported with `async_tokio` feature enabled:
 
-```rust
+```rust,ignore
 #[tokio::test]
 async fn test_tokio() {
     let stats = memory_measured_future(&GLOBAL, async {
