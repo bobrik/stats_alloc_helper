@@ -1,57 +1,4 @@
-//! # `stats_alloc_helper`
-//!
-//! A crate that provides a helper to measure memory allocations in tests.
-//!
-//! ## Example
-//!
-//! To allow measuring allocations, you must use the provided [LockedAllocator],
-//! because otherwise tests running in other thread could mess up the numbers.
-//!
-//! Typically this means having the following at the top of section:
-//!
-//! ```
-//! use std::alloc::System;
-//! use stats_alloc::{StatsAlloc};
-//! use stats_alloc_helper::LockedAllocator;
-//!
-//! #[global_allocator]
-//! static GLOBAL: LockedAllocator<System> = LockedAllocator::new(StatsAlloc::system());
-//! ```
-//!
-//! For the tests themselves [memory_measured] is provided:
-//!
-//! ```
-//! # use std::alloc::System;
-//! # use stats_alloc::{Stats, StatsAlloc};
-//! # use stats_alloc_helper::{LockedAllocator, memory_measured};
-//! #
-//! # #[global_allocator]
-//! # static GLOBAL: LockedAllocator<System> = LockedAllocator::new(StatsAlloc::system());
-//! #
-//! let mut length = 0;
-//!
-//! let stats = memory_measured(&GLOBAL, || {
-//!     let s = "whoa".to_owned().replace("whoa", "wow").to_owned();
-//!
-//!     length = s.len();
-//! });
-//!
-//! assert_eq!(length, 3);
-//!
-//! assert_eq!(
-//!     stats,
-//!     Stats {
-//!         allocations: 3,
-//!         deallocations: 3,
-//!         reallocations: 0,
-//!         bytes_allocated: 15,
-//!         bytes_deallocated: 15,
-//!         bytes_reallocated: 0
-//!     }
-//! );
-//! ```
-//!
-//! See crate's tests for more examples.
+#![doc = include_str!("../README.md")]
 
 use std::{
     alloc::GlobalAlloc,
@@ -60,7 +7,13 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "async_tokio")]
+use std::future::Future;
+
 use stats_alloc::{Stats, StatsAlloc};
+
+#[cfg(feature = "async_tokio")]
+use tokio::{runtime, task::spawn_blocking};
 
 const STATE_UNLOCKED: usize = 0;
 const STATE_IN_USE: usize = 1;
@@ -225,6 +178,38 @@ where
     after - before
 }
 
+/// Measure memory and return [Stats] object for the runtime of the passed future.
+#[cfg(feature = "async_tokio")]
+pub async fn memory_measured_future<A, F>(alloc: &'static LockedAllocator<A>, f: F) -> Stats
+where
+    A: GlobalAlloc + Send + Sync,
+    F: Future<Output = ()> + Send + 'static,
+{
+    // Tokio runtime cannot be created from a thread that is a part of a runtime already.
+    spawn_blocking(|| {
+        let runtime = runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        runtime.block_on(async {
+            alloc.lock();
+
+            let before = alloc.stats();
+
+            f.await;
+
+            let after = alloc.stats();
+
+            alloc.unlock();
+
+            after - before
+        })
+    })
+    .await
+    .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -327,6 +312,27 @@ mod tests {
                 reallocations: 0,
                 bytes_allocated: 15,
                 bytes_deallocated: 15,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "async_tokio")]
+    async fn test_tokio() {
+        let stats = memory_measured_future(&GLOBAL, async {
+            let _ = vec![1, 2, 3, 4];
+        })
+        .await;
+
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 1,
+                deallocations: 1,
+                reallocations: 0,
+                bytes_allocated: 16,
+                bytes_deallocated: 16,
                 bytes_reallocated: 0
             }
         );

@@ -12,7 +12,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-default:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -23,3 +23,14 @@ jobs:
         run: cargo test --verbose
       - name: Run clippy
         run: cargo clippy --verbose --tests --examples --benches -- --deny warnings
+  build-tokio:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --features async_tokio --verbose
+      - name: Run tests
+        run: cargo test --features async_tokio --verbose
+      - name: Run clippy
+        run: cargo clippy --features async_tokio --verbose --tests --examples --benches -- --deny warnings
