@@ -70,4 +70,22 @@ async fn test_tokio() {
 This is achieved by creating a separate single threaded runtime
 on a separate thread and driving the future to completion on it.
 
+<div class="warning">
+<!-- the next empty line is necessary for docs.rs -->
+
+Keep in mind that your future must be able to be driven to completion on a
+separate runtime with no dependencies on the main one.
+
+If you create a complex client on the main runtime (think `hyper`) and try
+to test one method of it on a separate runtime, you might discover a deadlock
+because there's a background future being driven by the main runtime that
+is blocked trying to access a locked allocator.
+
+You can solve this by:
+
+1. Measure how much memory it takes to create a client.
+2. Measure how much memory it takes to create a client and do a thing.
+3. Subtract the former from the latter.
+</div>
+
 See crate's tests for more examples.
