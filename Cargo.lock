@@ -81,6 +81,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 
 [[package]]
+name = "probe"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8e2d2444b730c8f027344c60f9e1f1554d7a3342df9bdd425142ed119a6e5a3"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,9 +118,10 @@ checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
 
 [[package]]
 name = "stats_alloc_helper"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "libc",
+ "probe",
  "stats_alloc",
  "tokio",
 ]

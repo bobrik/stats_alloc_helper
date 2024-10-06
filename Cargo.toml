@@ -1,6 +1,6 @@
 [package]
 name = "stats_alloc_helper"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["Ivan Babrou <github@ivan.computer>"]
 repository = "https://github.com/bobrik/stats_alloc_helper"
@@ -12,6 +12,7 @@ keywords = ["alloc", "stats_alloc", "benchmark"]
 stats_alloc = { version = "0.1" }
 tokio = { version = "1", features = ["rt", "macros"], optional = true }
 libc = { version = "0.2" }
+probe = { version = "0.5" }
 
 [features]
 default = []
