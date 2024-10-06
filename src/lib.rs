@@ -43,7 +43,8 @@ where
     }
 
     /// An allocation free serialization code that runs prior to any allocator operation.
-    fn before_op(&self) {
+    /// Returns whether the current thread locked the allocator.
+    fn before_op(&self) -> bool {
         let current_thread_id = Self::current_thread_id();
 
         loop {
@@ -56,13 +57,15 @@ where
                 Ok(_) => break,
                 Err(existing) => {
                     if existing == current_thread_id {
-                        break;
+                        return true;
                     }
                 }
             }
 
             sleep(SLEEP);
         }
+
+        false
     }
 
     /// An allocation free serialization code that runs after to any allocator operation.
@@ -91,10 +94,10 @@ where
     /// A serialization wrapper to use for all allocator operations.
     fn serialized<F, O>(&self, op: F) -> O
     where
-        F: FnOnce() -> O,
+        F: FnOnce(bool) -> O,
     {
-        self.before_op();
-        let result = op();
+        let locked = self.before_op();
+        let result = op(locked);
         self.after_op();
 
         result
@@ -143,19 +146,33 @@ where
     T: GlobalAlloc,
 {
     unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
-        self.serialized(|| self.inner.alloc(layout))
+        self.serialized(|is_locked| {
+            if is_locked {
+                probe::probe!(LockedAllocator, alloc_locked);
+            }
+
+            self.inner.alloc(layout)
+        })
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: std::alloc::Layout) {
-        self.serialized(|| self.inner.dealloc(ptr, layout))
-    }
+        self.serialized(|is_locked| {
+            if is_locked {
+                probe::probe!(LockedAllocator, dealloc_locked);
+            }
 
-    unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8 {
-        self.serialized(|| self.inner.alloc_zeroed(layout))
+            self.inner.dealloc(ptr, layout)
+        })
     }
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: std::alloc::Layout, new_size: usize) -> *mut u8 {
-        self.serialized(|| self.inner.realloc(ptr, layout, new_size))
+        self.serialized(|is_locked| {
+            if is_locked {
+                probe::probe!(LockedAllocator, realloc_locked);
+            }
+
+            self.inner.realloc(ptr, layout, new_size)
+        })
     }
 }
 
