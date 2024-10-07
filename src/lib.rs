@@ -233,7 +233,7 @@ mod tests {
         alloc::System,
         sync::{
             atomic::{AtomicBool, Ordering},
-            Arc,
+            Arc, Mutex,
         },
         thread::{sleep, spawn},
         time::Duration,
@@ -334,6 +334,65 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_std_mutex() {
+        let lock = Arc::new(Mutex::new(()));
+
+        let stats = memory_measured(&GLOBAL, || {
+            #[allow(let_underscore_lock)]
+            let _ = lock.lock().unwrap();
+        });
+
+        // Empirically measured, subject to change
+
+        #[cfg(target_os = "macos")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 1,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 64,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+
+        #[cfg(target_os = "linux")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 0,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 0,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[test]
+    fn test_parking_lot_mutex() {
+        let lock = Arc::new(parking_lot::Mutex::new(()));
+
+        let stats = memory_measured(&GLOBAL, || {
+            drop(lock.lock());
+        });
+
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 0,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 0,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
     #[tokio::test]
     #[cfg(feature = "async_tokio")]
     async fn test_tokio() {
@@ -350,6 +409,45 @@ mod tests {
                 reallocations: 0,
                 bytes_allocated: 16,
                 bytes_deallocated: 16,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "async_tokio")]
+    async fn test_tokio_sleep() {
+        let duration = std::time::Duration::from_millis(1000);
+
+        let stats = memory_measured_future(&GLOBAL, async move {
+            tokio::time::sleep(duration).await;
+        })
+        .await;
+
+        // Empirically measured, subject to change
+
+        #[cfg(target_os = "macos")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 3,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 176,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+
+        #[cfg(target_os = "linux")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 0,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 0,
+                bytes_deallocated: 0,
                 bytes_reallocated: 0
             }
         );

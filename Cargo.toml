@@ -10,9 +10,12 @@ keywords = ["alloc", "stats_alloc", "benchmark"]
 
 [dependencies]
 stats_alloc = { version = "0.1" }
-tokio = { version = "1", features = ["rt", "macros"], optional = true }
+tokio = { version = "1", features = ["rt", "macros", "time"], optional = true }
 libc = { version = "0.2" }
 probe = { version = "0.5" }
+
+[dev-dependencies]
+parking_lot = { version = "0.12" }
 
 [features]
 default = []
