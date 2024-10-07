@@ -233,7 +233,7 @@ mod tests {
         alloc::System,
         sync::{
             atomic::{AtomicBool, Ordering},
-            Arc,
+            Arc, Mutex,
         },
         thread::{sleep, spawn},
         time::Duration,
@@ -329,6 +329,44 @@ mod tests {
                 reallocations: 0,
                 bytes_allocated: 15,
                 bytes_deallocated: 15,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[test]
+    fn test_mutex() {
+        let lock = Arc::new(Mutex::new(()));
+
+        let stats = memory_measured(&GLOBAL, || {
+            #[allow(let_underscore_lock)]
+            let _ = lock.lock().unwrap();
+        });
+
+        // Empirically measured, subject to change
+
+        #[cfg(target_os = "macos")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 1,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 64,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+
+        #[cfg(target_os = "linux")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 0,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 0,
+                bytes_deallocated: 0,
                 bytes_reallocated: 0
             }
         );
