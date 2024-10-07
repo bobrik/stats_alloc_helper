@@ -335,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mutex() {
+    fn test_std_mutex() {
         let lock = Arc::new(Mutex::new(()));
 
         let stats = memory_measured(&GLOBAL, || {
@@ -359,6 +359,27 @@ mod tests {
         );
 
         #[cfg(target_os = "linux")]
+        assert_eq!(
+            stats,
+            Stats {
+                allocations: 0,
+                deallocations: 0,
+                reallocations: 0,
+                bytes_allocated: 0,
+                bytes_deallocated: 0,
+                bytes_reallocated: 0
+            }
+        );
+    }
+
+    #[test]
+    fn test_parking_lot_mutex() {
+        let lock = Arc::new(parking_lot::Mutex::new(()));
+
+        let stats = memory_measured(&GLOBAL, || {
+            drop(lock.lock());
+        });
+
         assert_eq!(
             stats,
             Stats {
